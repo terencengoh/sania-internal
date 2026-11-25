@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { go, useRoute } from '../router';
 import type { Data, EffectiveInvoiceStatus, Invoice } from '../types';
+import { InvoiceDocument } from '../components/Documents';
 import { Badge, DemoTag, Empty, Field, Modal, NumberInput, PageHead, Select, Text, TextArea, confirmDo } from '../components/ui';
 import { addDays, clientById, clientName, fmtDate, invoiceStatus, invoiceTotal, money, monthKey, monthLabel, nowIso, shiftMonth, today, uid } from '../utils';
 
@@ -150,6 +151,7 @@ export function InvoiceEditor({ id }: { id: string }) {
         {inv.status === 'Paid' && <button className="btn" onClick={() => save({ status: 'Sent', paidDate: '' })}>Undo paid</button>}
       </PageHead>
       {inv.demo && <p className="muted small no-print">Fictional demo invoice.</p>}
+      <p className="muted small no-print">{inv.status === 'Sent' || inv.status === 'Paid' ? 'Visible to this client in the Client Portal.' : 'Not visible in the Client Portal until it is marked Sent.'}</p>
 
       <div className="invoice-layout">
         <section className="card no-print">
@@ -190,49 +192,7 @@ export function InvoiceEditor({ id }: { id: string }) {
           </div>
         </section>
 
-        <section className="doc printable">
-          <div className="doc-head">
-            <div className="doc-brand">
-              <img src="./favicon.svg" alt="" width={44} height={44} />
-              <div><div className="doc-agency">{s.agencyName}</div><div className="muted small">{s.tagline}</div></div>
-            </div>
-            <div className="doc-title">
-              <div className="doc-kind">INVOICE</div>
-              <div>{inv.number}</div>
-              {st !== 'Draft' && <div className={`doc-stamp s-${st.toLowerCase()}`}>{st}</div>}
-            </div>
-          </div>
-          <div className="doc-meta">
-            <div>
-              <div className="label">From</div>
-              <strong>{s.agencyName}</strong>
-              {s.address && <div className="pre">{s.address}</div>}
-              {s.email && <div>{s.email}</div>}
-              {s.phone && <div>{s.phone}</div>}
-            </div>
-            <div>
-              <div className="label">Bill to</div>
-              <strong>{c?.company ?? '—'}</strong>
-              {c?.contactName && <div>Attn: {c.contactName}</div>}
-              {c && (c.city || c.state) && <div>{[c.city, c.state].filter(Boolean).join(', ')}</div>}
-              {c?.email && <div>{c.email}</div>}
-            </div>
-            <div className="right">
-              <div><span className="label">Issued</span> {fmtDate(inv.issueDate)}</div>
-              <div><span className="label">Due</span> {fmtDate(inv.dueDate)}</div>
-              {inv.status === 'Paid' && <div><span className="label">Paid</span> {fmtDate(inv.paidDate)}</div>}
-            </div>
-          </div>
-          <table className="doc-table">
-            <thead><tr><th>Description</th><th className="num">Qty</th><th className="num">Rate</th><th className="num">Amount</th></tr></thead>
-            <tbody>{inv.items.map((it) => <tr key={it.id}><td>{it.description || '—'}</td><td className="num">{it.qty}</td><td className="num">{money(it.rate, true)}</td><td className="num">{money(it.qty * it.rate, true)}</td></tr>)}</tbody>
-            <tfoot><tr><td colSpan={3} className="num">Total due (USD)</td><td className="num total">{money(inv.status === 'Paid' ? 0 : total, true)}</td></tr>
-              {inv.status === 'Paid' && <tr><td colSpan={3} className="num muted">Invoice total (paid)</td><td className="num muted">{money(total, true)}</td></tr>}</tfoot>
-          </table>
-          {inv.notes && <div className="doc-notes pre">{inv.notes}</div>}
-          <div className="doc-foot">{s.invoiceFooter}{s.paymentTermsDays ? ` Payment terms: net ${s.paymentTermsDays} days.` : ''}</div>
-          {inv.demo && <div className="doc-demo">DEMO — FICTIONAL INVOICE</div>}
-        </section>
+        <InvoiceDocument invoice={inv} client={c} settings={s} />
       </div>
 
       {paidModal && (
