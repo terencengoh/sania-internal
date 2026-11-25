@@ -11,6 +11,7 @@ import Revenue from './pages/Revenue';
 import Reports, { ReportEditor } from './pages/Reports';
 import SettingsPage from './pages/Settings';
 import { today } from './utils';
+import { useAuth } from './auth';
 
 const NAV = [
   { path: '', label: 'Dashboard', icon: '◧' },
@@ -30,7 +31,8 @@ const NAV = [
 
 export default function App() {
   const { parts } = useRoute();
-  const { data, hasDemo, saveError } = useStore();
+  const { data, hasDemo, saveError, saving, backendKind } = useStore();
+  const auth = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [section, id] = parts;
   const t = today();
@@ -74,7 +76,12 @@ export default function App() {
             ),
           )}
         </nav>
-        <div className="sidebar-foot">Data lives in this browser only. Back it up from Settings.</div>
+        <div className="sidebar-user">
+          <div className="sidebar-user-email" title={auth.user?.email}>{auth.user?.email}</div>
+          <div className="sidebar-user-role">{auth.user?.role}{auth.user?.demo ? ' · demo' : ''}{saving ? ' · saving…' : ''}</div>
+          <button className="btn sidebar-signout" onClick={() => auth.signOut()}>Sign out</button>
+        </div>
+        <div className="sidebar-foot">{backendKind === 'local' ? 'DEMO mode: data lives in this browser only. Back it up from Settings.' : 'Connected to Supabase. Access is controlled per user.'}</div>
       </aside>
       <div className="main">
         <header className="topbar no-print">
