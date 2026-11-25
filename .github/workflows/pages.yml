@@ -30,9 +30,15 @@ jobs:
       - name: Install
         run: npm ci
       - name: Build
+        # Optional: when both secrets exist the app runs in LIVE (Supabase) mode; otherwise DEMO mode.
+        # The anon key is designed to be public (RLS protects the data). Never put the service_role key here.
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           npm run build
           touch dist/.nojekyll
+          if [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ]; then echo "Built in LIVE (Supabase) mode"; else echo "Built in DEMO mode (Supabase secrets not set)"; fi
           ls -la dist
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
