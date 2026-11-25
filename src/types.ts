@@ -139,6 +139,17 @@ export interface Report extends Base {
   previous?: ReportKpis;
   highlights: string;
   nextSteps: string;
+  /** Visible in the client portal only when true */
+  published?: boolean;
+}
+
+/** Additional people at a client company */
+export interface Contact extends Base {
+  clientId: ID;
+  name: string;
+  email: string;
+  phone: string;
+  title: string;
 }
 
 export interface Settings {
@@ -159,6 +170,7 @@ export interface Data {
   version: 1;
   leads: Lead[];
   clients: Client[];
+  contacts: Contact[];
   campaigns: Campaign[];
   tasks: Task[];
   invoices: Invoice[];
@@ -166,4 +178,6 @@ export interface Data {
   settings: Settings;
 }
 
-export type Collection = 'leads' | 'clients' | 'campaigns' | 'tasks' | 'invoices' | 'reports';
+export type Collection = 'leads' | 'clients' | 'contacts' | 'campaigns' | 'tasks' | 'invoices' | 'reports';
+
+export type Role = 'owner' | 'staff' | 'client';
