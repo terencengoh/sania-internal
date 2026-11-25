@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { go } from '../router';
-import { CHANNELS, CLIENT_STATUSES, type Client } from '../types';
+import { CHANNELS, CLIENT_STATUSES, type Client, type Contact } from '../types';
 import { Badge, DemoTag, Empty, Field, Modal, MultiCheck, NumberInput, PageHead, Select, Text, confirmDo } from '../components/ui';
 import { Notes } from '../components/Notes';
+import { InviteModal } from '../components/UsersAccess';
 import { download, fmtDate, invoiceStatus, invoiceTotal, money, monthLabel, nowIso, today, toCsv, uid } from '../utils';
 
 const blank = (): Client => ({
@@ -94,8 +95,10 @@ export function ClientModal({ client, onClose }: { client: Client; onClose: () =
 }
 
 export function ClientDetail({ id }: { id: string }) {
-  const { data, upsert } = useStore();
+  const { data, upsert, remove } = useStore();
   const [edit, setEdit] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [contact, setContact] = useState<Contact | null>(null);
   const c = data.clients.find((x) => x.id === id);
   const t = today();
   if (!c) return <Empty>Client not found. <a href="#/clients">Back to clients</a></Empty>;
@@ -112,6 +115,7 @@ export function ClientDetail({ id }: { id: string }) {
       <div className="crumbs"><a href="#/clients">Clients</a> /</div>
       <PageHead title={c.company} sub={[c.contactName, c.email, c.phone, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}>
         <button className="btn" onClick={() => setEdit(true)}>Edit</button>
+        <button className="btn" onClick={() => setInviting(true)}>Invite client user</button>
         <button className="btn" onClick={() => go(`/campaigns?new=1&client=${c.id}`)}>+ Campaign</button>
         <button className="btn" onClick={() => go(`/reports?new=1&client=${c.id}`)}>+ Report</button>
         <button className="btn primary" onClick={() => go(`/invoices?new=1&client=${c.id}`)}>+ Invoice</button>
@@ -157,10 +161,36 @@ export function ClientDetail({ id }: { id: string }) {
         </section>
       </div>
       <section className="card">
-        <div className="card-head"><h3>Notes</h3>{lead && <a href={`#/leads?open=${lead.id}`}>Original lead →</a>}</div>
+        <div className="card-head"><h3>Contacts</h3><button className="btn" onClick={() => setContact({ id: uid(), createdAt: nowIso(), clientId: c.id, name: '', email: '', phone: '', title: '', demo: c.demo })}>+ Contact</button></div>
+        <p className="muted small">Primary: {c.contactName || '—'} {c.email && `· ${c.email}`} {c.phone && `· ${c.phone}`}</p>
+        {data.contacts.filter((x) => x.clientId === c.id).length ? (
+          <ul className="list compact">{data.contacts.filter((x) => x.clientId === c.id).map((x) => (
+            <li key={x.id} className="clickable" onClick={() => setContact(x)}><span><strong>{x.name}</strong>{x.title ? ` — ${x.title}` : ''}</span><span className="muted small">{[x.email, x.phone].filter(Boolean).join(' · ')}</span></li>
+          ))}</ul>
+        ) : null}
+      </section>
+      <section className="card">
+        <div className="card-head"><h3>Internal notes <span className="muted small">(never shown to the client)</span></h3>{lead && <a href={`#/leads?open=${lead.id}`}>Original lead →</a>}</div>
         <Notes notes={c.notes} onChange={(n) => upsert('clients', { ...c, notes: n })} />
       </section>
       {edit && <ClientModal client={c} onClose={() => setEdit(false)} />}
+      {inviting && <InviteModal clientId={c.id} defaultEmail={c.email} onClose={() => setInviting(false)} />}
+      {contact && (
+        <Modal title={data.contacts.some((x) => x.id === contact.id) ? 'Edit contact' : 'New contact'} onClose={() => setContact(null)}>
+          <div className="form-grid">
+            <Field label="Name *"><Text value={contact.name} onChange={(v) => setContact({ ...contact, name: v })} autoFocus /></Field>
+            <Field label="Title"><Text value={contact.title} onChange={(v) => setContact({ ...contact, title: v })} placeholder="e.g. Office manager" /></Field>
+            <Field label="Email"><Text type="email" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} /></Field>
+            <Field label="Phone"><Text type="tel" value={contact.phone} onChange={(v) => setContact({ ...contact, phone: v })} /></Field>
+          </div>
+          <div className="modal-foot">
+            {data.contacts.some((x) => x.id === contact.id) && <button className="btn danger" onClick={() => { remove('contacts', contact.id); setContact(null); }}>Delete</button>}
+            <span className="spacer" />
+            <button className="btn" onClick={() => setContact(null)}>Cancel</button>
+            <button className="btn primary" disabled={!contact.name.trim()} onClick={() => { upsert('contacts', contact); setContact(null); }}>Save</button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

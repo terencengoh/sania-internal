@@ -1,0 +1,9 @@
+# Minimal Supabase CLI config for this project (used by `npx supabase link/db push/functions deploy`).
+project_id = "sania-internal"
+
+[auth]
+# Invite-only: turn OFF public sign-ups (also do this in Dashboard → Authentication → Sign In / Providers).
+enable_signup = false
+
+[functions.invite-user]
+verify_jwt = true

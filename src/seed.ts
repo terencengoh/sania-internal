@@ -1,4 +1,4 @@
-import type { Campaign, Client, Data, Invoice, Lead, Report, Settings, Task } from './types';
+import type { Campaign, Client, Contact, Data, Invoice, Lead, Report, Settings, Task } from './types';
 import { addDays, monthLabel, nowIso, shiftMonth, monthKey, today, uid } from './utils';
 
 /**
@@ -26,6 +26,7 @@ export const emptyData = (): Data => ({
   version: 1,
   leads: [],
   clients: [],
+  contacts: [],
   campaigns: [],
   tasks: [],
   invoices: [],
@@ -116,13 +117,33 @@ export function demoData(): Data {
       previous: k(2900, 39000, 1480, 61, 47, 24, 0),
       highlights: 'Demo report — all numbers are fictional.\n• Added call extensions\n• Paused low-intent keywords',
       nextSteps: '• Launch heat pump ad group\n• Test new landing page headline',
+      published: true,
     },
+    {
+      ...d, id: uid(), clientId: c1.id, month: thisMonth,
+      kpis: k(1900, 26000, 1010, 41, 33, 0, 0),
+      previous: k(3100, 42000, 1650, 74, 58, 31, 0),
+      highlights: 'Demo draft — month in progress, not published to the client yet.',
+      nextSteps: '',
+      published: false,
+    },
+    {
+      ...d, id: uid(), clientId: c2.id, month: lastMonth,
+      kpis: k(0, 0, 0, 22, 15, 9, 0),
+      highlights: 'Demo report — fictional.\n• Published 4 service-area pages\n• 4 Google Business Profile posts',
+      nextSteps: '• 3 more service-area pages',
+      published: true,
+    },
+  ];
+  const contacts: Contact[] = [
+    { ...d, id: uid(), clientId: c1.id, name: 'Avery Office (demo)', email: 'office@polarpeak.example.com', phone: '(555) 010-0120', title: 'Office manager' },
   ];
 
   return {
     version: 1,
     leads,
     clients: [c1, c2, c3],
+    contacts,
     campaigns,
     tasks,
     invoices,

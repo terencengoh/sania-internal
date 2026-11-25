@@ -2,9 +2,15 @@ import { useRef, useState } from 'react';
 import { normalize, useStore } from '../store';
 import { Field, NumberInput, PageHead, Text, TextArea, confirmDo } from '../components/ui';
 import { download, today } from '../utils';
+import { useAuth } from '../auth';
+import { UsersAccess } from '../components/UsersAccess';
 
 export default function SettingsPage() {
-  const { data, setSettings, replaceAll, clearDemo, loadDemo, wipeAll, hasDemo } = useStore();
+  const { data, setSettings, replaceAll, importMerge, clearDemo, loadDemo, wipeAll, hasDemo, backendKind } = useStore();
+  const auth = useAuth();
+  const live = backendKind === 'supabase';
+  const isOwner = auth.user?.role === 'owner';
+  const [skipDemo, setSkipDemo] = useState(true);
   const s = data.settings;
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
@@ -15,6 +21,15 @@ export default function SettingsPage() {
   const onImport = async (f: File) => {
     try {
       const parsed = normalize(JSON.parse(await f.text()));
+      if (live) {
+        const n = (xs: { demo?: boolean }[]) => xs.filter((x) => !(skipDemo && x.demo)).length;
+        confirmDo(`Import "${f.name}" into Supabase?\n\nAdds or updates ${n(parsed.leads)} leads, ${n(parsed.clients)} clients, ${n(parsed.campaigns)} campaigns, ${n(parsed.tasks)} tasks, ${n(parsed.invoices)} invoices, ${n(parsed.reports)} reports${skipDemo ? ' (DEMO records skipped)' : ''}. Nothing already in the database is deleted.`, () => {
+          importMerge(parsed, { skipDemo });
+          setMsg(`Importing ${f.name}… changes are saved to Supabase in the background (watch for errors at the top of the page).`);
+        });
+        if (fileRef.current) fileRef.current.value = '';
+        return;
+      }
       confirmDo(`Replace ALL current data with "${f.name}"?\n\nIt contains ${parsed.leads.length} leads, ${parsed.clients.length} clients, ${parsed.invoices.length} invoices. Export a backup first if unsure.`, () => {
         replaceAll(parsed);
         setMsg(`Imported ${f.name}.`);
@@ -62,17 +77,22 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <UsersAccess />
+
       <section className="card">
         <h3>Backup & data</h3>
-        <p className="notice">
+        {live ? (
+          <p className="notice"><strong>Connected to Supabase.</strong> Data is stored in your Supabase database and shared by everyone you've given access. Exports below are a snapshot of what your account can see.</p>
+        ) : <p className="notice">
           <strong>Your data is stored only in this browser</strong> (localStorage on this device and browser profile). It is not synced and
           not sent anywhere. Clearing browser data, private/incognito windows, or switching devices will not carry it over —
           <strong> export a backup regularly</strong>.
-        </p>
+        </p>}
         <p className="muted small">Currently: {counts} · about {(bytes / 1024).toFixed(1)} KB.</p>
         <div className="btn-row">
           <button className="btn primary" onClick={() => { download(`sania-backup-${today()}.json`, JSON.stringify(data, null, 2)); setMsg('Backup downloaded.'); }}>Export backup (JSON)</button>
-          <button className="btn" onClick={() => fileRef.current?.click()}>Import backup…</button>
+          {(!live || isOwner) && <button className="btn" onClick={() => fileRef.current?.click()}>{live ? 'Import backup into Supabase…' : 'Import backup…'}</button>}
+          {live && isOwner && <label className="inline-check"><input type="checkbox" checked={skipDemo} onChange={(e) => setSkipDemo(e.target.checked)} /> Skip DEMO records</label>}
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
         </div>
         {msg && <p className="small">{msg}</p>}
@@ -81,13 +101,13 @@ export default function SettingsPage() {
         <p className="muted small">The app ships with fictional HVAC companies and numbers (tagged DEMO) so you can try every screen. Clearing removes only DEMO records; your own entries stay.</p>
         <div className="btn-row">
           <button className="btn danger" disabled={!hasDemo} onClick={() => confirmDo('Remove all fictional DEMO records? Your own records are kept.', () => { clearDemo(); setMsg('Demo data cleared.'); })}>Clear demo data</button>
-          <button className="btn" disabled={hasDemo} onClick={() => { loadDemo(); setMsg('Demo data loaded.'); }}>Load demo data</button>
+          {!live && <button className="btn" disabled={hasDemo} onClick={() => { loadDemo(); setMsg('Demo data loaded.'); }}>Load demo data</button>}
         </div>
         <hr />
-        <h4>Danger zone</h4>
-        <button className="btn danger" onClick={() => confirmDo('Delete ALL leads, clients, campaigns, tasks, invoices and reports in this browser? Settings are kept. This cannot be undone.', () => { wipeAll(); setMsg('All records deleted.'); })}>Delete all records</button>
+        {(!live || isOwner) && <><h4>Danger zone</h4>
+        <button className="btn danger" onClick={() => confirmDo('Delete ALL leads, clients, campaigns, tasks, invoices and reports in this browser? Settings are kept. This cannot be undone.', () => { wipeAll(); setMsg('All records deleted.'); })}>Delete all records</button></>}
       </section>
-      <p className="muted small">SANIA Internal Ops · static app, no server, no tracking. Nothing here sends email or processes payments.</p>
+      <p className="muted small">SANIA Internal Ops · {live ? 'Supabase mode' : 'demo mode (no server)'} · no tracking. Nothing here processes payments; the only emails are Supabase sign-in/invite emails in live mode.</p>
     </>
   );
 }

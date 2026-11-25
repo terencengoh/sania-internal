@@ -70,7 +70,7 @@ const tone: Record<string, string> = {
   Planning: 'blue', Active: 'green', Paused: 'amber', Completed: 'grey', Ended: 'grey',
   'To do': 'blue', 'In progress': 'copper', Review: 'amber', Done: 'green',
   Draft: 'grey', Sent: 'blue', Paid: 'green', Overdue: 'red', Void: 'grey',
-  High: 'red', Medium: 'amber', Low: 'grey', Demo: 'demo',
+  High: 'red', Medium: 'amber', Low: 'grey', Demo: 'demo', Published: 'green', owner: 'copper', staff: 'blue', client: 'teal', Pending: 'amber',
 };
 export const Badge = ({ children }: { children: string }) => <span className={`badge b-${tone[children] ?? 'grey'}`}>{children}</span>;
 export const DemoTag = ({ show }: { show?: boolean }) => (show ? <span className="badge b-demo" title="Fictional demo record">DEMO</span> : null);
